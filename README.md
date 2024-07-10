@@ -1,7 +1,7 @@
 ![](nuget.png)
 # Plugin.Maui.MessagingCenter
 
-`Plugin.Maui.MessagingCenter` provides a drop-in compatible replacement for the .NET MAUI MessagingCenter which has been deprecated and removed.
+`Plugin.Maui.MessagingCenter` provides a drop-in compatible replacement for the .NET MAUI MessagingCenter which has been deprecated and will be removed in the near future. This is a wrapper library that uses the method signatures of the .NET MAUI MessagingCenter but under the hood uses the MVVM Toolkit WeakReferenceMessenger which is known for its superb performance!
 
 Please note that you probably want to adopt the [MVVM Toolkit Messenger](https://learn.microsoft.com/dotnet/communitytoolkit/mvvm/messenger) APIs as they provide more functionality.
 
