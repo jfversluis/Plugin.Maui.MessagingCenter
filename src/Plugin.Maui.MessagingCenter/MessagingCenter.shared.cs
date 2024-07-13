@@ -1,5 +1,4 @@
 ﻿
-using System.Reflection;
 using CommunityToolkit.Mvvm.Messaging;
 
 namespace Plugin.Maui.MessagingCenter;
@@ -16,6 +15,8 @@ public class MessagingCenter : IMessagingCenter
     void IMessagingCenter.Send<TSender, TArgs>(TSender sender, string message, TArgs args)
     {
         ArgumentNullException.ThrowIfNull(sender);
+        ArgumentNullException.ThrowIfNullOrEmpty(message);
+
         WeakReferenceMessenger.Default.Send(new GenericMessage<TArgs>(message, args));
     }
 
@@ -27,6 +28,8 @@ public class MessagingCenter : IMessagingCenter
     void IMessagingCenter.Send<TSender>(TSender sender, string message)
     {
         ArgumentNullException.ThrowIfNull(sender);
+        ArgumentNullException.ThrowIfNullOrEmpty(message);
+
         WeakReferenceMessenger.Default.Send(new GenericMessage(message));
     }
 
@@ -38,13 +41,14 @@ public class MessagingCenter : IMessagingCenter
     void IMessagingCenter.Subscribe<TSender, TArgs>(object subscriber, string message, Action<TSender, TArgs> callback, TSender source)
     {
         ArgumentNullException.ThrowIfNull(subscriber);
+        ArgumentNullException.ThrowIfNullOrEmpty(message);
         ArgumentNullException.ThrowIfNull(callback);
 
         WeakReferenceMessenger.Default.Register<GenericMessage<TArgs>>(subscriber, (r, m) =>
         {
             if (m.Message == message)
             {
-                callback((TSender)r, m.Value);
+                callback(source, m.Value);
             }
         });
     }
@@ -57,13 +61,14 @@ public class MessagingCenter : IMessagingCenter
     void IMessagingCenter.Subscribe<TSender>(object subscriber, string message, Action<TSender> callback, TSender source)
     {
         ArgumentNullException.ThrowIfNull(subscriber);
+        ArgumentNullException.ThrowIfNullOrEmpty(message);
         ArgumentNullException.ThrowIfNull(callback);
 
         WeakReferenceMessenger.Default.Register<GenericMessage>(subscriber, (r, m) =>
         {
             if (m.Message == message)
             {
-                callback((TSender)r);
+                callback(source);
             }
         });
     }
@@ -75,6 +80,9 @@ public class MessagingCenter : IMessagingCenter
 
     void IMessagingCenter.Unsubscribe<TSender, TArgs>(object subscriber, string message)
     {
+        ArgumentNullException.ThrowIfNull(subscriber);
+        ArgumentNullException.ThrowIfNullOrEmpty(message);
+
         WeakReferenceMessenger.Default.Unregister<GenericMessage<TArgs>>(subscriber);
     }
 
@@ -85,6 +93,9 @@ public class MessagingCenter : IMessagingCenter
 
     void IMessagingCenter.Unsubscribe<TSender>(object subscriber, string message)
     {
+        ArgumentNullException.ThrowIfNull(subscriber);
+        ArgumentNullException.ThrowIfNullOrEmpty(message);
+
         WeakReferenceMessenger.Default.Unregister<GenericMessage>(subscriber);
     }
 }
