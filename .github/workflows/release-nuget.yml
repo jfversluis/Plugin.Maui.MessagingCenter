@@ -21,6 +21,8 @@ jobs:
         run: |
           $version="${{github.ref_name}}".TrimStart("v")
           "version-without-v=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+      - name: Test
+        run: dotnet test tests\Plugin.Maui.MessagingCenter.UnitTests
       - name: Pack
         run: dotnet pack src\Plugin.Maui.MessagingCenter.sln -c Release -p:PackageVersion=${{ steps.get_version.outputs.version-without-v }}
       - name: Push
