@@ -7,6 +7,6 @@ internal class GenericMessage(string message)
 
 internal class GenericMessage<T>(string message, T value)
 {
-    public string Message { get; } = message + "args";
+    public string Message { get; } = message;
     public T Value { get; } = value;
 }
