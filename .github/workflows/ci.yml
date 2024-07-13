@@ -17,7 +17,7 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Test
-      run: dotnet test tests\Plugin.Maui.MessagingCenter.UnitTests
+      run: dotnet test tests\Plugin.Maui.MessagingCenter.UnitTests.csproj
 
     - name: Build
       run: dotnet build src\Plugin.Maui.MessagingCenter.sln -c Release
