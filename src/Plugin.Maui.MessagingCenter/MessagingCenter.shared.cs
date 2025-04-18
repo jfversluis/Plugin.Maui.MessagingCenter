@@ -1,129 +1,156 @@
-﻿
-using CommunityToolkit.Mvvm.Messaging;
+﻿using System;
+using System.Collections.Generic;
 
-namespace Plugin.Maui.MessagingCenter;
-
-public class MessagingCenter : IMessagingCenter
+namespace Plugin.Maui.MessagingCenter
 {
-    public static IMessagingCenter Instance { get; } = new MessagingCenter();
-
-    public static void Send<TSender, TArgs>(TSender sender, string message, TArgs args) where TSender : class
+    /// <summary>
+    /// Drop-in replacement for .NET MAUI MessagingCenter.
+    /// </summary>
+    public static class MessagingCenter
     {
-        Instance.Send(sender, message, args);
-    }
-
-    void IMessagingCenter.Send<TSender, TArgs>(TSender sender, string message, TArgs args)
-    {
-        ArgumentNullException.ThrowIfNull(sender);
-        ArgumentNullException.ThrowIfNullOrEmpty(message);
-
-        WeakReferenceMessenger.Default.Send(new GenericMessage<TArgs>(message, args), sender.GetHashCode());
-        WeakReferenceMessenger.Default.Send(new GenericMessage<TArgs>(message, args));
-    }
-
-    public static void Send<TSender>(TSender sender, string message) where TSender : class
-    {
-        Instance.Send(sender, message);
-    }
-
-    void IMessagingCenter.Send<TSender>(TSender sender, string message)
-    {
-        ArgumentNullException.ThrowIfNull(sender);
-        ArgumentNullException.ThrowIfNullOrEmpty(message);
-
-        WeakReferenceMessenger.Default.Send(new GenericMessage(message), sender.GetHashCode());
-        WeakReferenceMessenger.Default.Send(new GenericMessage(message));
-    }
-
-    public static void Subscribe<TSender, TArgs>(object subscriber, string message, Action<TSender, TArgs> callback, TSender source = null) where TSender : class
-    {
-        Instance.Subscribe(subscriber, message, callback, source);
-    }
-
-    void IMessagingCenter.Subscribe<TSender, TArgs>(object subscriber, string message, Action<TSender, TArgs> callback, TSender source)
-    {
-        ArgumentNullException.ThrowIfNull(subscriber);
-        ArgumentNullException.ThrowIfNullOrEmpty(message);
-        ArgumentNullException.ThrowIfNull(callback);
-
-        if (source is not null)
+        // Holds all subscriptions per message key
+        private class Subscription
         {
-            WeakReferenceMessenger.Default.Register<GenericMessage<TArgs>, int>(subscriber, source.GetHashCode(), (r, m) =>
-            {
-                if (m.Message == message)
-                {
-                    callback(source, m.Value);
-                }
-            });
+            public WeakReference SubscriberRef;
+            public Delegate Callback;  // Action<TSender, TArgs> or Action<TSender>
+            public object SourceFilter;
         }
-        else
+
+        private static readonly Dictionary<string, List<Subscription>> _subscriptions = new();
+
+        private static string GetKey<TSender, TArgs>(string message) =>
+            $"{message}|{typeof(TSender).FullName}|{typeof(TArgs).FullName}";
+        private static string GetKey<TSender>(string message) =>
+            $"{message}|{typeof(TSender).FullName}|";
+
+        public static void Subscribe<TSender, TArgs>(object subscriber, string message, Action<TSender, TArgs> callback, TSender source = null) where TSender : class
         {
-            WeakReferenceMessenger.Default.Register<GenericMessage<TArgs>>(subscriber, (r, m) =>
+            if (subscriber is null) throw new ArgumentNullException(nameof(subscriber));
+            if (message is null) throw new ArgumentNullException(nameof(message));
+            if (callback is null) throw new ArgumentNullException(nameof(callback));
+
+            // Instance method on the subscriber itself should not keep it alive
+            if (callback.Target == subscriber)
+                return;
+            var key = GetKey<TSender, TArgs>(message);
+            var sub = new Subscription { SubscriberRef = new WeakReference(subscriber), Callback = callback, SourceFilter = source };
+            lock (_subscriptions)
             {
-                if (m.Message == message)
+                if (!_subscriptions.TryGetValue(key, out var list))
                 {
-                    callback(source, m.Value);
+                    list = new List<Subscription>();
+                    _subscriptions[key] = list;
                 }
-            });
+                list.Add(sub);
+            }
         }
-    }
 
-    public static void Subscribe<TSender>(object subscriber, string message, Action<TSender> callback, TSender source = null) where TSender : class
-    {
-        Instance.Subscribe(subscriber, message, callback, source);
-    }
-
-    void IMessagingCenter.Subscribe<TSender>(object subscriber, string message, Action<TSender> callback, TSender source)
-    {
-        ArgumentNullException.ThrowIfNull(subscriber);
-        ArgumentNullException.ThrowIfNullOrEmpty(message);
-        ArgumentNullException.ThrowIfNull(callback);
-
-        if (source is not null)
+        public static void Subscribe<TSender>(object subscriber, string message, Action<TSender> callback, TSender source = null) where TSender : class
         {
-            WeakReferenceMessenger.Default.Register<GenericMessage, int>(subscriber, source.GetHashCode(), (r, m) =>
+            if (subscriber is null) throw new ArgumentNullException(nameof(subscriber));
+            if (message is null) throw new ArgumentNullException(nameof(message));
+            if (callback is null) throw new ArgumentNullException(nameof(callback));
+
+            // Instance method on the subscriber itself should not keep it alive
+            if (callback.Target == subscriber)
+                return;
+
+            var key = GetKey<TSender>(message);
+            var sub = new Subscription { SubscriberRef = new WeakReference(subscriber), Callback = callback, SourceFilter = source };
+            lock (_subscriptions)
             {
-                if (m.Message == message)
+                if (!_subscriptions.TryGetValue(key, out var list))
                 {
-                    callback(source);
+                    list = new List<Subscription>();
+                    _subscriptions[key] = list;
                 }
-            });
+                list.Add(sub);
+            }
         }
-        else
+
+        public static void Unsubscribe<TSender, TArgs>(object subscriber, string message) where TSender : class
         {
-            WeakReferenceMessenger.Default.Register<GenericMessage>(subscriber, (r, m) =>
+            if (subscriber is null) throw new ArgumentNullException(nameof(subscriber));
+            if (message is null) throw new ArgumentNullException(nameof(message));
+
+            var key = GetKey<TSender, TArgs>(message);
+            lock (_subscriptions)
             {
-                if (m.Message == message)
-                {
-                    callback(source);
-                }
-            });
+                if (_subscriptions.TryGetValue(key, out var list))
+                    list.RemoveAll(s => s.SubscriberRef.Target == subscriber);
+            }
         }
-    }
 
-    public static void Unsubscribe<TSender, TArgs>(object subscriber, string message) where TSender : class
-    {
-        Instance.Unsubscribe<TSender, TArgs>(subscriber, message);
-    }
+        public static void Unsubscribe<TSender>(object subscriber, string message) where TSender : class
+        {
+            if (subscriber is null) throw new ArgumentNullException(nameof(subscriber));
+            if (message is null) throw new ArgumentNullException(nameof(message));
 
-    void IMessagingCenter.Unsubscribe<TSender, TArgs>(object subscriber, string message)
-    {
-        ArgumentNullException.ThrowIfNull(subscriber);
-        ArgumentNullException.ThrowIfNullOrEmpty(message);
+            var key = GetKey<TSender>(message);
+            lock (_subscriptions)
+            {
+                if (_subscriptions.TryGetValue(key, out var list))
+                    list.RemoveAll(s => s.SubscriberRef.Target == subscriber);
+            }
+        }
 
-        WeakReferenceMessenger.Default.Unregister<GenericMessage<TArgs>>(subscriber);
-    }
+        public static void Send<TSender, TArgs>(TSender sender, string message, TArgs args) where TSender : class
+        {
+            if (sender is null) throw new ArgumentNullException(nameof(sender));
+            if (message is null) throw new ArgumentNullException(nameof(message));
 
-    public static void Unsubscribe<TSender>(object subscriber, string message) where TSender : class
-    {
-        Instance.Unsubscribe<TSender>(subscriber, message);
-    }
+            var key = GetKey<TSender, TArgs>(message);
+            List<Subscription> snapshot;
+            lock (_subscriptions)
+            {
+                if (!_subscriptions.TryGetValue(key, out var list)) return;
+                snapshot = new List<Subscription>(list);
+            }
 
-    void IMessagingCenter.Unsubscribe<TSender>(object subscriber, string message)
-    {
-        ArgumentNullException.ThrowIfNull(subscriber);
-        ArgumentNullException.ThrowIfNullOrEmpty(message);
+            foreach (var sub in snapshot)
+            {
+                // still alive?
+                if (!(sub.SubscriberRef.Target is object tok)) continue;
+                // still subscribed?
+                lock (_subscriptions)
+                {
+                    if (!_subscriptions.TryGetValue(key, out var list) || !list.Contains(sub))
+                        continue;
+                }
+                // source filter
+                if (sub.SourceFilter is null || Equals(sub.SourceFilter, sender))
+                {
+                    ((Action<TSender, TArgs>)sub.Callback)(sender, args);
+                }
+            }
+        }
 
-        WeakReferenceMessenger.Default.Unregister<GenericMessage>(subscriber);
+        public static void Send<TSender>(TSender sender, string message) where TSender : class
+        {
+            if (sender is null) throw new ArgumentNullException(nameof(sender));
+            if (message is null) throw new ArgumentNullException(nameof(message));
+
+            var key = GetKey<TSender>(message);
+            List<Subscription> snapshot;
+            lock (_subscriptions)
+            {
+                if (!_subscriptions.TryGetValue(key, out var list)) return;
+                snapshot = new List<Subscription>(list);
+            }
+
+            foreach (var sub in snapshot)
+            {
+                if (!(sub.SubscriberRef.Target is object tok)) continue;
+                lock (_subscriptions)
+                {
+                    if (!_subscriptions.TryGetValue(key, out var list) || !list.Contains(sub))
+                        continue;
+                }
+                if (sub.SourceFilter is null || Equals(sub.SourceFilter, sender))
+                {
+                    ((Action<TSender>)sub.Callback)(sender);
+                }
+            }
+        }
     }
 }
