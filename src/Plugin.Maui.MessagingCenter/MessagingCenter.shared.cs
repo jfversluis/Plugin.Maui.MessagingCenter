@@ -8,6 +8,9 @@ namespace Plugin.Maui.MessagingCenter
     /// </summary>
     public static class MessagingCenter
     {
+        // Factory for consumers needing the IMessagingCenter interface
+        public static IMessagingCenter Instance { get; } = new MessagingCenterAdapter();
+
         // Holds all subscriptions per message key
         private class Subscription
         {
