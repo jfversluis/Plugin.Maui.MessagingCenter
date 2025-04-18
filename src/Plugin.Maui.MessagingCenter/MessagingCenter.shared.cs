@@ -4,11 +4,15 @@ using System.Collections.Generic;
 namespace Plugin.Maui.MessagingCenter
 {
     /// <summary>
-    /// Drop-in replacement for .NET MAUI MessagingCenter.
+    /// Provides a static, decoupled publish-subscribe messaging service with weak-reference semantics,
+    /// acting as a drop-in replacement for .NET MAUI MessagingCenter. Subscribers are held weakly and
+    /// can be garbage-collected when no longer referenced.
     /// </summary>
     public static class MessagingCenter
     {
-        // Factory for consumers needing the IMessagingCenter interface
+        /// <summary>
+        /// Default <see cref="IMessagingCenter"/> adapter exposing the static pub/sub API.
+        /// </summary>
         public static IMessagingCenter Instance { get; } = new MessagingCenterAdapter();
 
         // Holds all subscriptions per message key
@@ -26,6 +30,15 @@ namespace Plugin.Maui.MessagingCenter
         private static string GetKey<TSender>(string message) =>
             $"{message}|{typeof(TSender).FullName}|";
 
+        /// <summary>
+        /// Subscribes to receive messages of a given key with an argument payload.
+        /// </summary>
+        /// <typeparam name="TSender">Type of the sender publishing the message.</typeparam>
+        /// <typeparam name="TArgs">Type of the message argument.</typeparam>
+        /// <param name="subscriber">Object subscribing to the message.</param>
+        /// <param name="message">The message key to subscribe to.</param>
+        /// <param name="callback">Action to invoke when the message is received.</param>
+        /// <param name="source">Optional sender filter; only invoke if sender equals this value.</param>
         public static void Subscribe<TSender, TArgs>(object subscriber, string message, Action<TSender, TArgs> callback, TSender source = null) where TSender : class
         {
             if (subscriber is null) throw new ArgumentNullException(nameof(subscriber));
@@ -48,6 +61,14 @@ namespace Plugin.Maui.MessagingCenter
             }
         }
 
+        /// <summary>
+        /// Subscribes to receive messages of a given key without arguments.
+        /// </summary>
+        /// <typeparam name="TSender">Type of the sender publishing the message.</typeparam>
+        /// <param name="subscriber">Object subscribing to the message.</param>
+        /// <param name="message">The message key to subscribe to.</param>
+        /// <param name="callback">Action to invoke when the message is received.</param>
+        /// <param name="source">Optional sender filter; only invoke if sender equals this value.</param>
         public static void Subscribe<TSender>(object subscriber, string message, Action<TSender> callback, TSender source = null) where TSender : class
         {
             if (subscriber is null) throw new ArgumentNullException(nameof(subscriber));
@@ -71,6 +92,13 @@ namespace Plugin.Maui.MessagingCenter
             }
         }
 
+        /// <summary>
+        /// Unsubscribes from messages of a given key with an argument payload.
+        /// </summary>
+        /// <typeparam name="TSender">Type of the sender.</typeparam>
+        /// <typeparam name="TArgs">Type of the message argument.</typeparam>
+        /// <param name="subscriber">The subscriber to unregister.</param>
+        /// <param name="message">The message key to unsubscribe from.</param>
         public static void Unsubscribe<TSender, TArgs>(object subscriber, string message) where TSender : class
         {
             if (subscriber is null) throw new ArgumentNullException(nameof(subscriber));
@@ -84,6 +112,12 @@ namespace Plugin.Maui.MessagingCenter
             }
         }
 
+        /// <summary>
+        /// Unsubscribes from messages of a given key without arguments.
+        /// </summary>
+        /// <typeparam name="TSender">Type of the sender.</typeparam>
+        /// <param name="subscriber">The subscriber to unregister.</param>
+        /// <param name="message">The message key to unsubscribe from.</param>
         public static void Unsubscribe<TSender>(object subscriber, string message) where TSender : class
         {
             if (subscriber is null) throw new ArgumentNullException(nameof(subscriber));
@@ -97,6 +131,14 @@ namespace Plugin.Maui.MessagingCenter
             }
         }
 
+        /// <summary>
+        /// Sends a message with an argument payload to all active subscribers of the specified key.
+        /// </summary>
+        /// <typeparam name="TSender">Type of the sender.</typeparam>
+        /// <typeparam name="TArgs">Type of the message argument.</typeparam>
+        /// <param name="sender">The sender publishing the message.</param>
+        /// <param name="message">The message key to send.</param>
+        /// <param name="args">The argument payload.</param>
         public static void Send<TSender, TArgs>(TSender sender, string message, TArgs args) where TSender : class
         {
             if (sender is null) throw new ArgumentNullException(nameof(sender));
@@ -128,6 +170,12 @@ namespace Plugin.Maui.MessagingCenter
             }
         }
 
+        /// <summary>
+        /// Sends a message without arguments to all active subscribers of the specified key.
+        /// </summary>
+        /// <typeparam name="TSender">Type of the sender.</typeparam>
+        /// <param name="sender">The sender publishing the message.</param>
+        /// <param name="message">The message key to send.</param>
         public static void Send<TSender>(TSender sender, string message) where TSender : class
         {
             if (sender is null) throw new ArgumentNullException(nameof(sender));
