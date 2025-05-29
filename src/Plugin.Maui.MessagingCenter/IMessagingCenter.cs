@@ -3,6 +3,13 @@
 /// <summary>
 /// Provides a publish/subscribe messaging API for decoupled communication between components.
 /// </summary>
+/// <remarks>
+/// <para><strong>Important Behavioral Difference from .NET MAUI MessagingCenter:</strong></para>
+/// <para>This implementation prevents duplicate subscriptions to the same message type by the same subscriber.
+/// An <see cref="InvalidOperationException"/> will be thrown if you attempt to subscribe multiple times
+/// to the same message type with the same subscriber object.</para>
+/// <para>For detailed behavioral differences, see the project documentation.</para>
+/// </remarks>
 public interface IMessagingCenter
 {
     /// <summary>
@@ -32,6 +39,9 @@ public interface IMessagingCenter
     /// <param name="message">The message key to subscribe to.</param>
     /// <param name="callback">The callback to invoke when the message is received.</param>
     /// <param name="source">Optional sender filter; only messages from this sender will be received.</param>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when the same subscriber attempts to subscribe to the same message type multiple times.
+    /// </exception>
     void Subscribe<TSender, TArgs>(object subscriber, string message, Action<TSender, TArgs> callback, TSender source = null) where TSender : class;
 
     /// <summary>
@@ -42,6 +52,9 @@ public interface IMessagingCenter
     /// <param name="message">The message key to subscribe to.</param>
     /// <param name="callback">The callback to invoke when the message is received.</param>
     /// <param name="source">Optional sender filter; only messages from this sender will be received.</param>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when the same subscriber attempts to subscribe to the same message type multiple times.
+    /// </exception>
     void Subscribe<TSender>(object subscriber, string message, Action<TSender> callback, TSender source = null) where TSender : class;
 
     /// <summary>

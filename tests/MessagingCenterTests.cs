@@ -378,6 +378,24 @@ namespace Plugin.Maui.MessagingCenter.UnitTests
 			Assert.True(subscriber.Successful);
 		}
 
+	[Fact]
+	public void DuplicateSubscriptionThrowsException()
+	{
+		var subscriber = new object();
+		
+		// First subscription should work
+		Subscribe<MessagingCenterTests, string>(subscriber, "test", (sender, args) => { });
+		
+		// Second subscription to the same message type should throw
+		var exception = Assert.Throws<InvalidOperationException>(() =>
+			Subscribe<MessagingCenterTests, string>(subscriber, "test", (sender, args) => { }));
+			
+		Assert.Contains("already subscribed", exception.Message);
+		
+		// Clean up
+		Unsubscribe<MessagingCenterTests, string>(subscriber, "test");
+	}
+
 		class TestSubcriber
 		{
 			public void SetSuccess()

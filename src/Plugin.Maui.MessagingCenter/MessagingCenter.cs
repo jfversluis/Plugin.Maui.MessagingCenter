@@ -70,6 +70,16 @@ public static class MessagingCenter
     /// <param name="message">The message key to subscribe to.</param>
     /// <param name="callback">The callback to invoke when the message is received.</param>
     /// <param name="source">Optional sender filter; only messages from this sender will be received.</param>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when the same subscriber attempts to subscribe to the same message type multiple times.
+    /// Unlike the original .NET MAUI MessagingCenter, this implementation prevents duplicate subscriptions
+    /// to avoid memory leaks and unexpected behavior. Unsubscribe first before subscribing again.
+    /// </exception>
+    /// <remarks>
+    /// <para><strong>⚠️ Behavioral Difference from .NET MAUI MessagingCenter:</strong></para>
+    /// <para>This implementation does not allow multiple subscriptions to the same message type by the same subscriber.
+    /// If you need multiple handlers, consider using different message names or consolidating logic into a single handler.</para>
+    /// </remarks>
     public static void Subscribe<TSender, TArgs>(object subscriber, string message, Action<TSender, TArgs> callback, TSender source = null) where TSender : class
     {
         _instance.Subscribe(subscriber, message, callback, source);
@@ -83,6 +93,16 @@ public static class MessagingCenter
     /// <param name="message">The message key to subscribe to.</param>
     /// <param name="callback">The callback to invoke when the message is received.</param>
     /// <param name="source">Optional sender filter; only messages from this sender will be received.</param>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when the same subscriber attempts to subscribe to the same message type multiple times.
+    /// Unlike the original .NET MAUI MessagingCenter, this implementation prevents duplicate subscriptions
+    /// to avoid memory leaks and unexpected behavior. Unsubscribe first before subscribing again.
+    /// </exception>
+    /// <remarks>
+    /// <para><strong>Behavioral Difference from .NET MAUI MessagingCenter:</strong></para>
+    /// <para>This implementation does not allow multiple subscriptions to the same message type by the same subscriber.
+    /// If you need multiple handlers, consider using different message names or consolidating logic into a single handler.</para>
+    /// </remarks>
     public static void Subscribe<TSender>(object subscriber, string message, Action<TSender> callback, TSender source = null) where TSender : class
     {
         _instance.Subscribe(subscriber, message, callback, source);
@@ -113,7 +133,9 @@ public static class MessagingCenter
 }
 
 /// <summary>
-/// Internal implementation of IMessagingCenter using WeakReferenceMessenger
+/// Internal implementation of IMessagingCenter using WeakReferenceMessenger.
+/// This implementation prevents duplicate subscriptions to the same message type by the same subscriber,
+/// which is a behavioral difference from the original .NET MAUI MessagingCenter.
 /// </summary>
 internal class MessagingCenterImpl : IMessagingCenter
 {

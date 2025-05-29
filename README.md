@@ -22,6 +22,16 @@ After you have installed this library, you can either add the using statement at
 
 The API can be used the same as the .NET MAUI MessagingCenter APIs. You probably came here because you are already using the MessagingCenter in your .NET MAUI app, so you probably don't need more explanation. If you do need a reference, please find the documentation on the .NET MAUI MessagingCenter [here](https://learn.microsoft.com/dotnet/maui/fundamentals/messagingcenter) and the MVVM Toolkit Messenger [here](https://learn.microsoft.com/dotnet/communitytoolkit/mvvm/messenger).
 
+## Important Behavioral Differences
+
+⚠️ **This implementation has stricter subscription behavior than the original .NET MAUI MessagingCenter:**
+
+- **Multiple subscriptions to the same message type by the same subscriber will throw an `InvalidOperationException`**
+- This prevents accidental duplicate subscriptions and potential memory leaks
+- If you need multiple handlers, consider using different message names or consolidating logic into a single handler
+
+For detailed information about behavioral differences, see [BEHAVIOR_DIFFERENCES.md](BEHAVIOR_DIFFERENCES.md).
+
 ## Acknowledgements
 
 The bubble icon has kindly been provided by [Smashicons](https://www.freepik.com/icon/chat_134719#fromView=keyword&page=1&position=1&uuid=c6e6ca66-ab2d-44de-85e9-6138fbc90df6)
