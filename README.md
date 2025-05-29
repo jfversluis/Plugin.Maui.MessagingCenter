@@ -16,11 +16,126 @@ Available on [NuGet](http://www.nuget.org/packages/Plugin.Maui.MessagingCenter).
 
 Install with the dotnet CLI: `dotnet add package Plugin.Maui.MessagingCenter`, or through the NuGet Package Manager in Visual Studio.
 
+## Getting Started
+
+### 1. Add the Using Statement
+
+After installation, add the using statement to your files:
+
+```csharp
+using Plugin.Maui.MessagingCenter;
+```
+
+Or add it globally in your `GlobalUsings.cs` file:
+
+```csharp
+global using Plugin.Maui.MessagingCenter;
+```
+
+That's it! You can now use the `MessagingCenter` class just like you did in .NET MAUI. Since the API is compatible with the .NET MAUI MessagingCenter, you can use it in the same way as before, there should be no need to change your existing code.
+
+### 2. Basic Usage Examples
+
+#### Sending Messages with Arguments
+
+```csharp
+// Send a message with data
+MessagingCenter.Send<MainPage, string>(this, "LocationUpdate", "New York");
+
+// In another class, subscribe to receive the message
+MessagingCenter.Subscribe<MainPage, string>(this, "LocationUpdate", (sender, location) =>
+{
+    // Handle the location update
+    DisplayAlert("Location", $"New location: {location}", "OK");
+});
+```
+
+#### Sending Messages without Arguments
+
+```csharp
+// Send a simple notification message
+MessagingCenter.Send<MainPage>(this, "RefreshData");
+
+// Subscribe to the notification
+MessagingCenter.Subscribe<MainPage>(this, "RefreshData", (sender) =>
+{
+    // Refresh your data
+    LoadData();
+});
+```
+
+#### Using with ViewModels
+
+```csharp
+public class MainViewModel : INotifyPropertyChanged
+{
+    public void NotifyDataChanged()
+    {
+        // Send message from ViewModel
+        MessagingCenter.Send<MainViewModel, DataModel>(this, "DataUpdated", newData);
+    }
+}
+
+public partial class DetailPage : ContentPage
+{
+    public DetailPage()
+    {
+        InitializeComponent();
+        
+        // Subscribe to ViewModel messages
+        MessagingCenter.Subscribe<MainViewModel, DataModel>(this, "DataUpdated", (sender, data) =>
+        {
+            // Update UI with new data
+            UpdateDisplay(data);
+        });
+    }
+}
+```
+
+### 3. Important: Unsubscribing
+
+Always unsubscribe when your object is disposed to prevent memory leaks:
+
+```csharp
+public partial class MyPage : ContentPage
+{
+    protected override void OnDisappearing()
+    {
+        // Unsubscribe from all messages this page subscribed to
+        MessagingCenter.Unsubscribe<MainViewModel, DataModel>(this, "DataUpdated");
+        MessagingCenter.Unsubscribe<MainPage>(this, "RefreshData");
+        
+        base.OnDisappearing();
+    }
+}
+```
+
+### 4. Sender Filtering
+
+You can filter messages to only receive them from specific senders:
+
+```csharp
+// Only receive messages from a specific instance
+var specificViewModel = new MainViewModel();
+MessagingCenter.Subscribe<MainViewModel, string>(this, "StatusUpdate", 
+    (sender, status) => {
+        // Handle status update
+    }, specificViewModel); // Only from this specific instance
+```
+
 ## API Usage
 
-After you have installed this library, you can either add the using statement at the top of each file where you are using MessagingCenter (`using Plugin.Maui.MessagingCenter;`), or opt for a [global using](https://learn.microsoft.com/dotnet/csharp/language-reference/keywords/using-directive#global-modifier) statement so you only need to do it once.
+The API is compatible with the .NET MAUI MessagingCenter APIs. For more detailed documentation, see the .NET MAUI MessagingCenter [reference](https://learn.microsoft.com/dotnet/maui/fundamentals/messagingcenter) and the MVVM Toolkit Messenger [documentation](https://learn.microsoft.com/dotnet/communitytoolkit/mvvm/messenger).
 
-The API can be used the same as the .NET MAUI MessagingCenter APIs. You probably came here because you are already using the MessagingCenter in your .NET MAUI app, so you probably don't need more explanation. If you do need a reference, please find the documentation on the .NET MAUI MessagingCenter [here](https://learn.microsoft.com/dotnet/maui/fundamentals/messagingcenter) and the MVVM Toolkit Messenger [here](https://learn.microsoft.com/dotnet/communitytoolkit/mvvm/messenger).
+## Important Behavioral Differences
+
+⚠️ **This implementation has stricter subscription behavior than the original .NET MAUI MessagingCenter:**
+
+- **Multiple subscriptions to the same message type by the same subscriber will throw an `InvalidOperationException`**
+- This prevents accidental duplicate subscriptions and potential memory leaks
+- If you need multiple handlers, consider using different message names or consolidating logic into a single handler
+
+For detailed information about behavioral differences, see [BEHAVIOR_DIFFERENCES.md](BEHAVIOR_DIFFERENCES.md).
 
 ## Acknowledgements
 
