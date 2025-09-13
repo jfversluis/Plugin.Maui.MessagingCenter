@@ -396,6 +396,42 @@ namespace Plugin.Maui.MessagingCenter.UnitTests
 		Unsubscribe<MessagingCenterTests, string>(subscriber, "test");
 	}
 
+	[Fact]
+	public void MultipleSubscriptionsWithDifferentMessagesAllowed()
+	{
+		// This test replicates the user's scenario where they subscribe to multiple different messages
+		var subscriber = new object();
+		
+		bool message1Received = false;
+		bool message2Received = false;
+		bool message3Received = false;
+		
+		// Subscribe to three different messages (like the user's code)
+		Subscribe<MessageModel>(subscriber, "VerbeteFavorited123", (sender) => message1Received = true);
+		Subscribe<MessageModel>(subscriber, "FavoriteVerbeteDeleted456", (sender) => message2Received = true);
+		Subscribe<MessageModel>(subscriber, "GotoCatGramOpenClose", (sender) => message3Received = true);
+		
+		// Send all three messages
+		Send(new MessageModel(), "VerbeteFavorited123");
+		Send(new MessageModel(), "FavoriteVerbeteDeleted456");
+		Send(new MessageModel(), "GotoCatGramOpenClose");
+		
+		// All should be received
+		Assert.True(message1Received);
+		Assert.True(message2Received);
+		Assert.True(message3Received);
+		
+		// Clean up
+		Unsubscribe<MessageModel>(subscriber, "VerbeteFavorited123");
+		Unsubscribe<MessageModel>(subscriber, "FavoriteVerbeteDeleted456");
+		Unsubscribe<MessageModel>(subscriber, "GotoCatGramOpenClose");
+	}
+
+	// Helper class to match the user's MessageModel
+	public class MessageModel
+	{
+	}
+
 		class TestSubcriber
 		{
 			public void SetSuccess()
