@@ -427,6 +427,25 @@ namespace Plugin.Maui.MessagingCenter.UnitTests
 		Unsubscribe<MessageModel>(subscriber, "GotoCatGramOpenClose");
 	}
 
+	[Fact] 
+	public void DuplicateSubscriptionToSameMessageStillThrowsException()
+	{
+		// This test validates that the fix still prevents true duplicate subscriptions
+		var subscriber = new object();
+		
+		// First subscription should work
+		Subscribe<MessageModel>(subscriber, "TestMessage", (sender) => { });
+		
+		// Second subscription to the SAME message should still throw
+		var exception = Assert.Throws<InvalidOperationException>(() =>
+			Subscribe<MessageModel>(subscriber, "TestMessage", (sender) => { }));
+			
+		Assert.Contains("already subscribed", exception.Message);
+		
+		// Clean up
+		Unsubscribe<MessageModel>(subscriber, "TestMessage");
+	}
+
 	// Helper class to match the user's MessageModel
 	public class MessageModel
 	{
