@@ -71,14 +71,16 @@ public static class MessagingCenter
     /// <param name="callback">The callback to invoke when the message is received.</param>
     /// <param name="source">Optional sender filter; only messages from this sender will be received.</param>
     /// <exception cref="InvalidOperationException">
-    /// Thrown when the same subscriber attempts to subscribe to the same message type multiple times.
+    /// Thrown when the same subscriber attempts to subscribe to the same message type and message key multiple times.
     /// Unlike the original .NET MAUI MessagingCenter, this implementation prevents duplicate subscriptions
-    /// to avoid memory leaks and unexpected behavior. Unsubscribe first before subscribing again.
+    /// to avoid memory leaks and unexpected behavior. However, subscribing to different message keys is allowed.
+    /// Unsubscribe first before subscribing again to the same message.
     /// </exception>
     /// <remarks>
     /// <para><strong>⚠️ Behavioral Difference from .NET MAUI MessagingCenter:</strong></para>
-    /// <para>This implementation does not allow multiple subscriptions to the same message type by the same subscriber.
-    /// If you need multiple handlers, consider using different message names or consolidating logic into a single handler.</para>
+    /// <para>This implementation does not allow multiple subscriptions to the same message type and message key by the same subscriber.
+    /// However, you can subscribe to multiple different message keys with the same message type.
+    /// If you need multiple handlers for the same message, consider using different message names or consolidating logic into a single handler.</para>
     /// </remarks>
     public static void Subscribe<TSender, TArgs>(object subscriber, string message, Action<TSender, TArgs> callback, TSender source = null) where TSender : class
     {
@@ -94,14 +96,16 @@ public static class MessagingCenter
     /// <param name="callback">The callback to invoke when the message is received.</param>
     /// <param name="source">Optional sender filter; only messages from this sender will be received.</param>
     /// <exception cref="InvalidOperationException">
-    /// Thrown when the same subscriber attempts to subscribe to the same message type multiple times.
+    /// Thrown when the same subscriber attempts to subscribe to the same message type and message key multiple times.
     /// Unlike the original .NET MAUI MessagingCenter, this implementation prevents duplicate subscriptions
-    /// to avoid memory leaks and unexpected behavior. Unsubscribe first before subscribing again.
+    /// to avoid memory leaks and unexpected behavior. However, subscribing to different message keys is allowed.
+    /// Unsubscribe first before subscribing again to the same message.
     /// </exception>
     /// <remarks>
     /// <para><strong>Behavioral Difference from .NET MAUI MessagingCenter:</strong></para>
-    /// <para>This implementation does not allow multiple subscriptions to the same message type by the same subscriber.
-    /// If you need multiple handlers, consider using different message names or consolidating logic into a single handler.</para>
+    /// <para>This implementation does not allow multiple subscriptions to the same message type and message key by the same subscriber.
+    /// However, you can subscribe to multiple different message keys with the same message type.
+    /// If you need multiple handlers for the same message, consider using different message names or consolidating logic into a single handler.</para>
     /// </remarks>
     public static void Subscribe<TSender>(object subscriber, string message, Action<TSender> callback, TSender source = null) where TSender : class
     {
@@ -149,7 +153,8 @@ internal class MessagingCenterImpl : IMessagingCenter
         ArgumentNullException.ThrowIfNull(message);
 
         var msg = new MessagingCenterMessage<TSender, TArgs>(sender, message, args);
-        _messenger.Send(msg);
+        var token = CreateSubscriptionKey<TSender, TArgs>(message);
+        _messenger.Send<MessagingCenterMessage<TSender, TArgs>, string>(msg, token);
     }
 
     public void Send<TSender>(TSender sender, string message) where TSender : class
@@ -158,7 +163,8 @@ internal class MessagingCenterImpl : IMessagingCenter
         ArgumentNullException.ThrowIfNull(message);
 
         var msg = new MessagingCenterMessage<TSender>(sender, message);
-        _messenger.Send(msg);
+        var token = CreateSubscriptionKey<TSender>(message);
+        _messenger.Send<MessagingCenterMessage<TSender>, string>(msg, token);
     }
 
     public void Subscribe<TSender, TArgs>(object subscriber, string message, Action<TSender, TArgs> callback, TSender source = null) where TSender : class
@@ -180,7 +186,8 @@ internal class MessagingCenterImpl : IMessagingCenter
             _strongReferences[strongRefKey] = subscriber;
         }
 
-        _messenger.Register<MessagingCenterMessage<TSender, TArgs>>(subscriber, (recipient, msg) =>
+        // Use the subscription key as a token to make each message+subscriber combination unique
+        _messenger.Register<MessagingCenterMessage<TSender, TArgs>, string>(subscriber, subscriptionKey, (recipient, msg) =>
         {
             if (msg.Message == message && (source == null || ReferenceEquals(msg.Sender, source)))
             {
@@ -212,7 +219,8 @@ internal class MessagingCenterImpl : IMessagingCenter
             _strongReferences[strongRefKey] = subscriber;
         }
 
-        _messenger.Register<MessagingCenterMessage<TSender>>(subscriber, (recipient, msg) =>
+        // Use the subscription key as a token to make each message+subscriber combination unique
+        _messenger.Register<MessagingCenterMessage<TSender>, string>(subscriber, subscriptionKey, (recipient, msg) =>
         {
             if (msg.Message == message && (source == null || ReferenceEquals(msg.Sender, source)))
             {
@@ -237,8 +245,8 @@ internal class MessagingCenterImpl : IMessagingCenter
         var strongRefKey = $"{subscriber.GetHashCode()}:{message}:{typeof(TSender).FullName}:{typeof(TArgs).FullName}";
         _strongReferences.TryRemove(strongRefKey, out _);
 
-        // Unregister from the messenger - this will unregister ALL handlers for this message type for this subscriber
-        _messenger.Unregister<MessagingCenterMessage<TSender, TArgs>>(subscriber);
+        // Unregister from the messenger using the specific token for this message
+        _messenger.Unregister<MessagingCenterMessage<TSender, TArgs>, string>(subscriber, subscriptionKey);
     }
 
     public void Unsubscribe<TSender>(object subscriber, string message) where TSender : class
@@ -253,8 +261,8 @@ internal class MessagingCenterImpl : IMessagingCenter
         var strongRefKey = $"{subscriber.GetHashCode()}:{message}:{typeof(TSender).FullName}:NoArgs";
         _strongReferences.TryRemove(strongRefKey, out _);
 
-        // Unregister from the messenger - this will unregister ALL handlers for this message type for this subscriber
-        _messenger.Unregister<MessagingCenterMessage<TSender>>(subscriber);
+        // Unregister from the messenger using the specific token for this message
+        _messenger.Unregister<MessagingCenterMessage<TSender>, string>(subscriber, subscriptionKey);
     }
 
     private bool IsUnsubscribed(object subscriber, string subscriptionKey)
@@ -380,9 +388,17 @@ internal class MessagingCenterImpl : IMessagingCenter
 }
 
 /// <summary>
+/// Base interface for messaging center messages to enable type-safe message handling
+/// </summary>
+internal interface IMessagingCenterMessage
+{
+    string MessageKey { get; }
+}
+
+/// <summary>
 /// Message wrapper for MessagingCenter with arguments
 /// </summary>
-internal class MessagingCenterMessage<TSender, TArgs> where TSender : class
+internal class MessagingCenterMessage<TSender, TArgs> : IMessagingCenterMessage where TSender : class
 {
     public MessagingCenterMessage(TSender sender, string message, TArgs args)
     {
@@ -394,12 +410,13 @@ internal class MessagingCenterMessage<TSender, TArgs> where TSender : class
     public TSender Sender { get; }
     public string Message { get; }
     public TArgs Args { get; }
+    public string MessageKey => Message;
 }
 
 /// <summary>
 /// Message wrapper for MessagingCenter without arguments
 /// </summary>
-internal class MessagingCenterMessage<TSender> where TSender : class
+internal class MessagingCenterMessage<TSender> : IMessagingCenterMessage where TSender : class
 {
     public MessagingCenterMessage(TSender sender, string message)
     {
@@ -409,4 +426,5 @@ internal class MessagingCenterMessage<TSender> where TSender : class
 
     public TSender Sender { get; }
     public string Message { get; }
+    public string MessageKey => Message;
 }

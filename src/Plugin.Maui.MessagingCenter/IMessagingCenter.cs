@@ -5,9 +5,9 @@
 /// </summary>
 /// <remarks>
 /// <para><strong>Important Behavioral Difference from .NET MAUI MessagingCenter:</strong></para>
-/// <para>This implementation prevents duplicate subscriptions to the same message type by the same subscriber.
+/// <para>This implementation prevents duplicate subscriptions to the same message type and message key by the same subscriber.
 /// An <see cref="InvalidOperationException"/> will be thrown if you attempt to subscribe multiple times
-/// to the same message type with the same subscriber object.</para>
+/// to the same message type and key with the same subscriber object. However, different message keys are allowed.</para>
 /// <para>For detailed behavioral differences, see the project documentation.</para>
 /// </remarks>
 public interface IMessagingCenter
@@ -40,7 +40,7 @@ public interface IMessagingCenter
     /// <param name="callback">The callback to invoke when the message is received.</param>
     /// <param name="source">Optional sender filter; only messages from this sender will be received.</param>
     /// <exception cref="InvalidOperationException">
-    /// Thrown when the same subscriber attempts to subscribe to the same message type multiple times.
+    /// Thrown when the same subscriber attempts to subscribe to the same message type and message key multiple times.
     /// </exception>
     void Subscribe<TSender, TArgs>(object subscriber, string message, Action<TSender, TArgs> callback, TSender source = null) where TSender : class;
 
@@ -53,7 +53,7 @@ public interface IMessagingCenter
     /// <param name="callback">The callback to invoke when the message is received.</param>
     /// <param name="source">Optional sender filter; only messages from this sender will be received.</param>
     /// <exception cref="InvalidOperationException">
-    /// Thrown when the same subscriber attempts to subscribe to the same message type multiple times.
+    /// Thrown when the same subscriber attempts to subscribe to the same message type and message key multiple times.
     /// </exception>
     void Subscribe<TSender>(object subscriber, string message, Action<TSender> callback, TSender source = null) where TSender : class;
 
