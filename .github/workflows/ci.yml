@@ -22,7 +22,7 @@ jobs:
         dotnet-version: 10.0.x
 
     - name: Install .NET MAUI Workload
-      run: dotnet workload restore
+      run: dotnet workload restore src\Plugin.Maui.MessagingCenter.sln
 
     - name: Test
       run: dotnet test tests\Plugin.Maui.MessagingCenter.UnitTests.csproj
