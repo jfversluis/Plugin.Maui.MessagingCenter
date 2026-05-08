@@ -1,17 +1,19 @@
-# $ Copilot InstructionsREPO 
+# Plugin.Maui.MessagingCenter - Copilot Instructions
 
 ## Project Overview
 
-This is a .NET MAUI plugin that provides a drop-in replacement for the deprecated .NET MAUI MessagingCenter. It targets All (pure cross-platform, no platform-specific code).
+This is a .NET MAUI plugin that provides a drop-in replacement for the deprecated .NET MAUI MessagingCenter. It is pure cross-platform (no platform-specific code).
 
-### Architecture
+## Architecture
 
-**Pure cross- single MessagingCenter.cs, no platform files.platform** 
+Pure cross-platform - single `MessagingCenter.cs`, no platform files.
 
-`IMessagingCenter`: Send/Subscribe/Unsubscribe with generics.
+`IMessagingCenter`: `Send`/`Subscribe`/`Unsubscribe` with generics.
 
-Key difference from MAUI: prevents duplicate subscriptions (throws InvalidOperationException).
-Uses weak references. Thread-safe.
+Key differences from the original MAUI MessagingCenter:
+- Prevents duplicate subscriptions (throws `InvalidOperationException`)
+- Uses weak references
+- Thread-safe
 
 ## Code Conventions
 
@@ -19,11 +21,11 @@ Uses weak references. Thread-safe.
 All code uses: `Plugin.Maui.MessagingCenter`
 
 ### File Naming
-- `*.shared. Cross-platform codecs` 
-- `*.android. Androidcs` 
-- `*.macios. iOS/macOScs` 
-- `*.windows. Windowscs` 
-- `*.net. Generic .NET fallbackcs` 
+- `*.shared.cs` - Cross-platform code
+- `*.android.cs` - Android-specific code
+- `*.macios.cs` - iOS/macOS-specific code
+- `*.windows.cs` - Windows-specific code
+- `*.net.cs` - Generic .NET fallback
 
 ### Standards
 - File-scoped namespaces
@@ -38,7 +40,6 @@ dotnet build src/Plugin.Maui.MessagingCenter/Plugin.Maui.MessagingCenter.csproj 
 ```
 
 ## When Making Changes
-1. Ensure the plugin builds on all target platforms
+1. Ensure the plugin builds
 2. If adding public API, update the interface
-3. Implement on all supported platforms
-4. Update sample app and README
+3. Update sample app and README
